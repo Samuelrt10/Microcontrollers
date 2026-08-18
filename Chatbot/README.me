@@ -1,0 +1,71 @@
+#Control de LED por Voz con LLM Local (Llama 3.1:8b) y ESP32
+
+Sistema de control domótico por reconocimiento de voz y procesamiento de lenguaje natural (NLP). Captura comandos hablados por micrófono en la PC, los procesa localmente con el modelo **Llama 3.1:8b** (vía Ollama) para interpretar la intención del usuario y envía la orden por **MQTT** para controlar un LED en un **ESP32** simulado en Wokwi con **MicroPython**.
+
+---
+
+## Simulación en Wokwi
+
+El circuito y el firmware en MicroPython están disponibles en el siguiente enlace:
+
+👉 **[Simulación en Wokwi](https://wokwi.com/projects/472663301586461697)**
+
+---
+
+## Conexiones del Circuito
+
+| Componente | Pin ESP32 (GPIO) | Función |
+| :--- | :---: | :--- |
+| **LED Principal** | `GPIO 25` | Actuador controlado por voz (`LED_ON` / `LED_OFF`) |
+| **Botón 1** | `GPIO 13` | Control manual / test (Activo en bajo) |
+| **Botón 2** | `GPIO 14` | Control manual / test (Activo en bajo) |
+
+---
+
+## Arquitectura del Sistema
+
+```
+[ Micrófono ] ──> [ Speech-to-Text ] ──> [ Llama 3.1:8b (Ollama Local) ] ──(MQTT)──> [ Broker HiveMQ ]
+                                                                                            │
+                                                                                      (MQTT Subscribe)
+                                                                                            ▼
+                                                                                    [ ESP32 Wokwi ] ──> [ LED GPIO 25 ]
+```
+
+1. **Captura de Audio:** `sounddevice` toma la señal del micrófono y Google Speech Recognition la convierte a texto en español.
+2. **Inferencia Local:** Llama 3.1:8b analiza el lenguaje natural (ej. *"está muy oscuro"*, *"apaga la luz"*) y retorna un JSON estructurado con el comando (`LED_ON` o `LED_OFF`).
+3. **Comunicación MQTT:** El comando se publica en el tópico `lab_micro_deepseek/led_unico` en `broker.hivemq.com`.
+4. **Firmware Embebido:** El ESP32 recibe el mensaje mediante un cliente MQTT ligero en MicroPython y conmuta el pin GPIO 25.
+
+---
+
+## Requisitos e Instalación
+
+### 1. Dependencias de Python en la PC
+Instalar las librerías necesarias:
+```bash
+pip install sounddevice numpy requests SpeechRecognition paho-mqtt
+```
+*(Si usas Windows y `python`/`pip` no se reconocen directamente, ejecuta con `py -m pip install ...`).*
+
+### 2. Modelo LLM Local
+Tener Ollama instalado y el modelo descargado:
+```bash
+ollama run llama3.1:8b
+```
+
+---
+
+## Guía de Ejecución
+
+1. Abrir la simulación en **[Wokwi](https://wokwi.com/projects/472663301586461697)** y hacer clic en el botón de **Play**.
+2. Verificar en la consola de Wokwi que el ESP32 se conecte al Wi-Fi y quede suscrito al tópico MQTT.
+3. En la terminal de la computadora, ejecutar:
+   ```bash
+   python asistente_llama3.py
+   ```
+   *(o `py asistente_llama3.py`)*
+4. Presionar **[ENTER]** y hablar al micrófono:
+   - *"Enciende la luz"* o *"no veo nada"* $\rightarrow$ Enciende el LED (GPIO 25).
+   - *"Apaga el foco"* o *"ya me voy a dormir"* $\rightarrow$ Apaga el LED.
+5. Para terminar la ejecución, decir *"salir"* o presionar `Ctrl + C`.
