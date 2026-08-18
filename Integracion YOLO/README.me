@@ -1,0 +1,53 @@
+#Detección de Vehículos con YOLOv8 y ESP32
+
+Proyecto de visión artificial y sistemas embebidos. Se utiliza un modelo YOLOv8 en la PC para detectar carros y motos de juguete mediante la cámara web, enviando la señal por MQTT para controlar dos LEDs en una simulación de ESP32 en Wokwi.
+
+---
+
+## Simulación en Wokwi
+
+El circuito y el código en MicroPython ya se encuentran configurados en el siguiente enlace:
+
+👉 **[Proyecto en Wokwi](https://wokwi.com/projects/472657174217984001)**
+
+---
+
+## Conexiones del Circuito
+
+| Componente | Pin ESP32 | Función |
+| :--- | :---: | :--- |
+| **LED Rojo** | `GPIO 25` | Enciende al detectar carro |
+| **LED Verde** | `GPIO 26` | Enciende al detectar moto |
+| **Botón 1 (Rojo)** | `GPIO 13` | Control manual / test |
+| **Botón 2 (Azul)** | `GPIO 14` | Control manual / test |
+
+---
+
+## Estructura y Funcionamiento
+
+1. **PC (`detector_yolo.py`)**: Captura video en tiempo real, procesa los frames con YOLOv8 y clasifica el objeto (`car` o `motorcycle`).
+2. **Comunicación**: Se envían los estados (`CAR`, `MOTO`, `OFF`) al broker público `broker.hivemq.com` en el tópico `lab_vision_carros_motos/control`.
+3. **ESP32 (`main.py`)**: Conectado a la red de Wokwi, escucha los mensajes del broker y conmuta los pines correspondientes.
+
+---
+
+## Cómo ejecutar el proyecto
+
+### 1. Requisitos en la PC
+Instalar las dependencias necesarias:
+```bash
+pip install ultralytics opencv-python paho-mqtt
+```
+
+### 2. Pasos
+1. Entrar al link de **[Wokwi](https://wokwi.com/projects/472657174217984001)** y darle al botón de **Play** para iniciar la simulación.
+2. En la consola de Wokwi verificar que se conecte al Wi-Fi y al broker MQTT.
+3. Abrir una terminal en la carpeta donde está el script de Python y ejecutar:
+   ```bash
+   python detector_yolo.py
+   ```
+4. Poner el carro o la moto de juguete frente a la cámara:
+   - **Carro:** Enciende el LED rojo (GPIO 25).
+   - **Moto:** Enciende el LED verde (GPIO 26).
+   - **Sin objeto:** Apaga ambos LEDs.
+5. Para salir del programa, presionar la tecla `q` en la ventana de video.
