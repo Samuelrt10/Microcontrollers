@@ -1,0 +1,220 @@
+<?xml version="1.0"?>
+<robot name="brazo_robot">
+
+    <!-- =================================================== -->
+    <!-- MATERIALES Y COLORES                                -->
+    <!-- =================================================== -->
+    <material name="azul_celeste">
+        <color rgba="0.2 0.6 0.8 1.0"/>
+    </material>
+    <material name="naranja">
+        <color rgba="1.0 0.5 0.0 1.0"/>
+    </material>
+    <material name="rojo">
+        <color rgba="0.8 0.1 0.1 1.0"/>
+    </material>
+    <material name="blanco_gris">
+        <color rgba="0.9 0.9 0.9 1.0"/>
+    </material>
+    <material name="verde">
+        <color rgba="0.1 0.8 0.2 1.0"/>
+    </material>
+    <material name="oscuro">
+        <color rgba="0.2 0.2 0.2 1.0"/>
+    </material>
+
+    <!-- =================================================== -->
+    <!-- BASE LINK (Soporte Cilíndrico de Base)              -->
+    <!-- =================================================== -->
+    <link name="base_link">
+        <visual>
+            <geometry>
+                <cylinder length="0.15" radius="0.25"/>
+            </geometry>
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
+            <material name="azul_celeste"/>
+        </visual>
+        <collision>
+            <geometry>
+                <cylinder length="0.15" radius="0.25"/>
+            </geometry>
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass value="5.0"/>
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
+            <inertia ixx="0.08" ixy="0" ixz="0" iyy="0.08" iyz="0" izz="0.15"/>
+        </inertial>
+    </link>
+
+    <!-- =================================================== -->
+    <!-- ARTICULACIÓN 1: Rotación de Base (Yaw - Eje Z)     -->
+    <!-- =================================================== -->
+    <joint name="joint_1" type="revolute">
+        <parent link="base_link"/>
+        <child link="brazo1"/>
+        <origin xyz="0 0 0.15" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-3.1416" upper="3.1416" effort="150" velocity="3.0"/>
+    </joint>
+
+    <!-- =================================================== -->
+    <!-- ESLABÓN 1: Brazo 1 (Hombro)                         -->
+    <!-- =================================================== -->
+    <link name="brazo1">
+        <visual>
+            <!-- Torre vertical / Hombro -->
+            <geometry>
+                <box size="0.12 0.12 0.45"/>
+            </geometry>
+            <origin xyz="0 0 0.225" rpy="0 0 0"/>
+            <material name="naranja"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.12 0.12 0.45"/>
+            </geometry>
+            <origin xyz="0 0 0.225" rpy="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass value="2.5"/>
+            <origin xyz="0 0 0.225" rpy="0 0 0"/>
+            <inertia ixx="0.045" ixy="0" ixz="0" iyy="0.045" iyz="0" izz="0.006"/>
+        </inertial>
+    </link>
+
+    <!-- =================================================== -->
+    <!-- ARTICULACIÓN 2: Elevación de Hombro (Pitch - Eje Y) -->
+    <!-- =================================================== -->
+    <joint name="joint_2" type="revolute">
+        <parent link="brazo1"/>
+        <child link="brazo2"/>
+        <origin xyz="0 0 0.45" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="-2.0" upper="2.0" effort="150" velocity="3.0"/>
+    </joint>
+
+    <!-- =================================================== -->
+    <!-- ESLABÓN 2: Brazo 2 (Antebrazo)                      -->
+    <!-- =================================================== -->
+    <link name="brazo2">
+        <visual>
+            <geometry>
+                <box size="0.09 0.09 0.40"/>
+            </geometry>
+            <origin xyz="0 0 0.20" rpy="0 0 0"/>
+            <material name="verde"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.09 0.09 0.40"/>
+            </geometry>
+            <origin xyz="0 0 0.20" rpy="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass value="1.8"/>
+            <origin xyz="0 0 0.20" rpy="0 0 0"/>
+            <inertia ixx="0.025" ixy="0" ixz="0" iyy="0.025" iyz="0" izz="0.003"/>
+        </inertial>
+    </link>
+
+    <!-- =================================================== -->
+    <!-- ARTICULACIÓN 3: Articulación de Codo (Pitch - Eje Y)-->
+    <!-- =================================================== -->
+    <joint name="joint_3" type="revolute">
+        <parent link="brazo2"/>
+        <child link="pinza_base"/>
+        <origin xyz="0 0 0.40" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="-2.5" upper="2.5" effort="100" velocity="3.0"/>
+    </joint>
+
+    <!-- =================================================== -->
+    <!-- BASE DE LA PINZA / MUÑECA                          -->
+    <!-- =================================================== -->
+    <link name="pinza_base">
+        <visual>
+            <geometry>
+                <box size="0.14 0.08 0.06"/>
+            </geometry>
+            <origin xyz="0 0 0.03" rpy="0 0 0"/>
+            <material name="oscuro"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.14 0.08 0.06"/>
+            </geometry>
+            <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass value="0.6"/>
+            <origin xyz="0 0 0.03" rpy="0 0 0"/>
+            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+        </inertial>
+    </link>
+
+    <!-- =================================================== -->
+    <!-- ARTICULACIÓN PINZA IZQUIERDA (Prismática - Eje X)   -->
+    <!-- =================================================== -->
+    <joint name="dedo_izq" type="prismatic">
+        <parent link="pinza_base"/>
+        <child link="link_dedo_izq"/>
+        <origin xyz="-0.04 0 0.06" rpy="0 0 0"/>
+        <axis xyz="1 0 0"/>
+        <limit lower="-0.02" upper="0.03" effort="50" velocity="0.5"/>
+    </joint>
+
+    <link name="link_dedo_izq">
+        <visual>
+            <geometry>
+                <box size="0.015 0.04 0.12"/>
+            </geometry>
+            <origin xyz="0 0 0.06" rpy="0 0 0"/>
+            <material name="rojo"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.015 0.04 0.12"/>
+            </geometry>
+            <origin xyz="0 0 0.06" rpy="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0.06" rpy="0 0 0"/>
+            <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        </inertial>
+    </link>
+
+    <!-- =================================================== -->
+    <!-- ARTICULACIÓN PINZA DERECHA (Prismática - Eje X)     -->
+    <!-- =================================================== -->
+    <joint name="dedo_der" type="prismatic">
+        <parent link="pinza_base"/>
+        <child link="link_dedo_der"/>
+        <origin xyz="0.04 0 0.06" rpy="0 0 0"/>
+        <axis xyz="-1 0 0"/>
+        <limit lower="-0.02" upper="0.03" effort="50" velocity="0.5"/>
+    </joint>
+
+    <link name="link_dedo_der">
+        <visual>
+            <geometry>
+                <box size="0.015 0.04 0.12"/>
+            </geometry>
+            <origin xyz="0 0 0.06" rpy="0 0 0"/>
+            <material name="rojo"/>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.015 0.04 0.12"/>
+            </geometry>
+            <origin xyz="0 0 0.06" rpy="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0.06" rpy="0 0 0"/>
+            <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        </inertial>
+    </link>
+
+</robot>
