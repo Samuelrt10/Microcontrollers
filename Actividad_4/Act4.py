@@ -1,13 +1,14 @@
+import os
+import time
 import cv2
 import mediapipe as mp
 import serial
-import time
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 # 1. Configurar la comunicación serie con la ESP32
 # ¡CUIDADO! Reemplaza 'COM3' por el puerto correcto de tu ESP32 (ej. '/dev/ttyUSB0' en Linux/Mac)
-PUERTO_SERIE = 'COM3'
+PUERTO_SERIE = 'COM5'
 BAUD_RATE = 115200
 
 try:
@@ -18,7 +19,8 @@ except Exception as e:
     esp32 = None
 
 # 2. Configurar el modelo de MediaPipe
-base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
+model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gesture_recognizer.task')
+base_options = python.BaseOptions(model_asset_path=model_path)
 options = vision.GestureRecognizerOptions(base_options=base_options)
 recognizer = vision.GestureRecognizer.create_from_options(options)
 
