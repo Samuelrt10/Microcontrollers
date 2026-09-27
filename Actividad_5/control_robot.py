@@ -6,6 +6,8 @@ Autor: Samuel Rubio Tamberg
 Script en Python para PC (Host):
 - Autodetección y conexión inmediata al puerto serie (UART) de la ESP32 a 115200 baudios.
 - Recibe datos telemétricos del Joystick en tiempo real.
+- Sistema de calibración automática de reposo (tara) y filtrado de zona muerta (Deadzone)
+  para evitar derivas o movimientos indeseados cuando el joystick está en el centro.
 - Simulación física interactiva en PyBullet con el modelo 'brazo_robot.urdf'.
 - Esquema de control conmutable e incremental:
     * MODO 0: Joystick controla Rotación de Base (joint_1) y Elevación de Hombro (joint_2).
@@ -34,6 +36,10 @@ VELOCIDAD_HOMBRO = 0.030
 VELOCIDAD_CODO = 0.035
 VELOCIDAD_PINZA = 0.001
 
+# Parámetros de calibración y zona muerta (Deadzone) para evitar movimiento en reposo
+ZONA_MUERTA_JOYSTICK = 0.12  # Valores por debajo de ±0.12 se consideran estrictamente 0.0
+CALIBRACION_MUESTRAS = 30    # Muestras iniciales en reposo para calcular el cero exacto
+
 # Límites de las articulaciones (según especificación del URDF)
 LIMITES = {
     'joint_1': (-3.1416, 3.1416),
@@ -41,6 +47,24 @@ LIMITES = {
     'joint_3': (-2.5, 2.5),
     'pinza': (-0.02, 0.03)  # Apertura/Cierre de pinza
 }
+
+
+def procesar_eje_joystick(valor_crudo, offset, umbral=ZONA_MUERTA_JOYSTICK):
+    """
+    Resta el offset de calibración y aplica una zona muerta con respuesta suave.
+    Si el joystick está en reposo (dentro de la zona muerta), retorna estrictamente 0.0.
+    """
+    valor = valor_crudo - offset
+    if abs(valor) <= umbral:
+        return 0.0
+
+    # Re-escalado suave para que arranque de forma fluida desde cero sin saltos bruscos
+    if valor > 0:
+        norm = (valor - umbral) / (1.0 - umbral)
+        return min(max(norm, 0.0), 1.0)
+    else:
+        norm = (valor + umbral) / (1.0 - umbral)
+        return min(max(norm, -1.0), 0.0)
 
 
 # ==============================================================================
@@ -196,8 +220,19 @@ print("SISTEMA DE TELEOPERACIÓN ACTIVO")
 print("MODO 0: Eje X -> Base (joint_1), Eje Y -> Hombro (joint_2)")
 print("MODO 1: Eje Y -> Codo (joint_3), Eje X -> Pinza (dedo_izq/der)")
 print("Pulsador SW: Conmuta entre MODO 0 y MODO 1")
+print("Calibración: Presione 'C' para recalibrar el reposo (cero) en cualquier momento")
 print("Teclas de respaldo: [1] Modo 0, [2] Modo 1, [Espacio] Toggle Pinza")
 print("=" * 60 + "\n")
+
+# Variables para calibración de offset en reposo
+raw_norm_x = 0.0
+raw_norm_y = 0.0
+offset_x = 0.0
+offset_y = 0.0
+calibracion_x = []
+calibracion_y = []
+calibrado_auto = False
+ultimo_tiempo_serial = time.time()
 
 try:
     while p.isConnected():
@@ -214,14 +249,34 @@ try:
                     if linea:
                         partes = linea.split(',')
                         if len(partes) >= 4:
-                            norm_x = float(partes[0])
-                            norm_y = float(partes[1])
+                            raw_norm_x = float(partes[0])
+                            raw_norm_y = float(partes[1])
                             sw_presionado = int(partes[2])
                             modo_activo = int(partes[3])
+                            ultimo_tiempo_serial = time.time()
+
+                            # Calibración inicial automática (promedia las primeras N muestras en reposo)
+                            if not calibrado_auto:
+                                calibracion_x.append(raw_norm_x)
+                                calibracion_y.append(raw_norm_y)
+                                if len(calibracion_x) >= CALIBRACION_MUESTRAS:
+                                    offset_x = sum(calibracion_x) / len(calibracion_x)
+                                    offset_y = sum(calibracion_y) / len(calibracion_y)
+                                    calibrado_auto = True
+                                    print(f"[CALIBRACIÓN AUTO] Cero fijado: Offset X={offset_x:+.3f}, Y={offset_y:+.3f}")
+
+                # Failsafe: Si no hay tramas en más de 0.5s, forzar reposo
+                if time.time() - ultimo_tiempo_serial < 0.5:
+                    norm_x = procesar_eje_joystick(raw_norm_x, offset_x, ZONA_MUERTA_JOYSTICK)
+                    norm_y = procesar_eje_joystick(raw_norm_y, offset_y, ZONA_MUERTA_JOYSTICK)
+                else:
+                    norm_x = 0.0
+                    norm_y = 0.0
+
             except Exception as ex:
                 pass
 
-        # --- B. LECTURA DE TECLADO (RESPALDO / MANUAL) ---
+        # --- B. LECTURA DE TECLADO (RESPALDO Y CALIBRACIÓN MANUAL) ---
         keys = p.getKeyboardEvents()
         if ord('1') in keys and keys[ord('1')] & p.KEY_WAS_TRIGGERED:
             modo_activo = 0
@@ -229,6 +284,14 @@ try:
             modo_activo = 1
         if ord(' ') in keys and keys[ord(' ')] & p.KEY_WAS_TRIGGERED:
             pos_pinza = LIMITES['pinza'][0] if pos_pinza > 0 else LIMITES['pinza'][1]
+
+        # Calibración manual en cualquier momento presionando 'c' o 'C'
+        if (ord('c') in keys and keys[ord('c')] & p.KEY_WAS_TRIGGERED) or \
+           (ord('C') in keys and keys[ord('C')] & p.KEY_WAS_TRIGGERED):
+            offset_x = raw_norm_x
+            offset_y = raw_norm_y
+            calibrado_auto = True
+            print(f"[CALIBRACIÓN MANUAL] Nuevo centro fijado: Offset X={offset_x:+.3f}, Y={offset_y:+.3f}")
 
         # Flechas de teclado como respaldo si no hay señal del joystick
         if norm_x == 0.0 and norm_y == 0.0:
@@ -262,15 +325,18 @@ try:
 
         # --- D. TELEMETRÍA EN PANTALLA ---
         puerto_str = esp32.port if (esp32 and esp32.is_open) else "DESCONECTADO (Modo Teclado)"
+        estado_joystick = "EN REPOSO (CERO)" if (norm_x == 0.0 and norm_y == 0.0) else "EN MOVIMIENTO"
         texto_telemetria = (
             f"=== TELEOPERACIÓN ESP32 ({puerto_str}) ===\n"
             f"Modo: {desc_modo}\n"
-            f"Joystick X: {norm_x:+.2f} | Y: {norm_y:+.2f}\n"
+            f"Estado: {estado_joystick}\n"
+            f"Joystick X: {norm_x:+.2f} | Y: {norm_y:+.2f} (Raw: {raw_norm_x:+.2f}, {raw_norm_y:+.2f})\n"
+            f"Offset Cero: X={offset_x:+.2f} | Y={offset_y:+.2f} [Presione 'C' para calibrar]\n"
             f"Base (j1): {pos_j1:+.2f} rad\n"
             f"Hombro (j2): {pos_j2:+.2f} rad\n"
             f"Codo (j3): {pos_j3:+.2f} rad\n"
             f"Pinza: {pos_pinza * 1000:+.1f} mm\n"
-            f"Presione SW / '1' / '2' para alternar modo"
+            f"Controles: SW/'1'/'2' Modo | 'C' Calibrar Cero | Espacio Pinza"
         )
 
         debug_text_id = p.addUserDebugText(

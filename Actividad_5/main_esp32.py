@@ -5,6 +5,7 @@ Autor: Samuel Rubio Tamberg
 
 Firmware MicroPython para ESP32:
 - Lectura de dos ejes analógicos del Joystick (VRx en GPIO 34, VRy en GPIO 35).
+- Calibración automática del centro analógico en reposo al arrancar.
 - Lectura de pulsador digital del Joystick (SW en GPIO 32 con PULL_UP).
 - Tratamiento de señal: Zona muerta (deadband) y normalización (-1.0 a 1.0).
 - Detección de flanco del botón SW para alternancia de modo conmutable:
@@ -36,9 +37,20 @@ btn_sw = machine.Pin(PIN_SW, machine.Pin.IN, machine.Pin.PULL_UP)
 # ==============================================================================
 # 2. PARÁMETROS DE CALIBRACIÓN Y TRATAMIENTO DE SEÑAL
 # ==============================================================================
-CENTRO_ADC = 2048
-ZONA_MUERTA = 250     # Rango central considerado reposo para evitar drift
+ZONA_MUERTA = 300     # Rango central considerado reposo para evitar drift
 MAX_ADC = 4095
+
+# Calibración dinámica del centro en reposo (promedio de 30 muestras al arrancar)
+time.sleep_ms(200)
+suma_x = 0
+suma_y = 0
+for _ in range(30):
+    suma_x += adc_x.read()
+    suma_y += adc_y.read()
+    time.sleep_ms(10)
+
+centro_adc_x = int(suma_x / 30)
+centro_adc_y = int(suma_y / 30)
 
 modo_actual = 0       # 0: Base/Hombro, 1: Codo/Pinza
 ultimo_estado_sw = 1
@@ -46,37 +58,37 @@ tiempo_ultimo_debounce = 0
 DEBOUNCE_MS = 250
 
 
-def normalizar_eje(valor_crudo):
+def normalizar_eje(valor_crudo, centro_adc):
     """
     Convierte la lectura ADC (0-4095) a un rango normalizado (-1.0 a 1.0)
-    aplicando filtro de zona muerta alrededor del centro.
+    aplicando el centro calibrado y filtro de zona muerta alrededor del centro.
     """
-    desviacion = valor_crudo - CENTRO_ADC
+    desviacion = valor_crudo - centro_adc
     if abs(desviacion) < ZONA_MUERTA:
         return 0.0
 
     if desviacion > 0:
-        norm = (desviacion - ZONA_MUERTA) / (MAX_ADC - CENTRO_ADC - ZONA_MUERTA)
+        denominador = max(1, MAX_ADC - centro_adc - ZONA_MUERTA)
+        norm = (desviacion - ZONA_MUERTA) / denominador
         return min(max(norm, 0.0), 1.0)
     else:
-        norm = (desviacion + ZONA_MUERTA) / (CENTRO_ADC - ZONA_MUERTA)
+        denominador = max(1, centro_adc - ZONA_MUERTA)
+        norm = (desviacion + ZONA_MUERTA) / denominador
         return min(max(norm, -1.0), 0.0)
 
 
 # ==============================================================================
 # 3. BUCLE PRINCIPAL DE MUESTREO Y TRANSMISIÓN UART
 # ==============================================================================
-print("ESP32 Joystick teleoperation iniciada. Enviando telemetria...")
-
 while True:
     t_inicio = time.ticks_ms()
 
-    # Lectura de los potenciómetros del joystick
+    # Lectura de los potenciómetros del joystick con centro calibrado
     raw_x = adc_x.read()
     raw_y = adc_y.read()
 
-    norm_x = normalizar_eje(raw_x)
-    norm_y = normalizar_eje(raw_y)
+    norm_x = normalizar_eje(raw_x, centro_adc_x)
+    norm_y = normalizar_eje(raw_y, centro_adc_y)
 
     # Lectura y detección de flanco de bajada del botón (presionado = 0)
     estado_sw = btn_sw.value()
@@ -93,7 +105,6 @@ while True:
     ultimo_estado_sw = estado_sw
 
     # Formateo de la trama de transmisión serial (X,Y,SW_TRIGGER,MODO)
-    # Ejemplo: "0.45,-0.80,0,0\n"
     trama = f"{norm_x:.2f},{norm_y:.2f},{sw_presionado},{modo_actual}\n"
     sys.stdout.write(trama)
 
