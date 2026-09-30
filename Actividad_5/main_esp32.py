@@ -113,3 +113,6 @@ while True:
     t_espera = 20 - t_transcurrido
     if t_espera > 0:
         time.sleep_ms(t_espera)
+
+
+

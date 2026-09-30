@@ -183,7 +183,6 @@ pip install pybullet pyserial
 >
 > 🔗 **Video Demostrativo:** https://youtu.be/oi740IL2mLQ
 ### Pantallazos del Entorno:
-*(Adjuntar capturas de pantalla de la ventana interactiva de PyBullet con el HUD de telemetría y el montaje de la ESP32 con el Joystick)*
 
 ---
 
