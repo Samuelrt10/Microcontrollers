@@ -1,6 +1,9 @@
-﻿# Actividad 6: Sistema Robótico Dibujante con Teclado Matricial 4x4 y PyBullet
+﻿# Actividad 6 - Punto 1: Sistema Robótico Dibujante con Teclado Matricial 4x4 y PyBullet
 
-**Materia:** Microcontroladores  
+**Universidad Militar Nueva Granada**  
+**Facultad de Ingeniería — Microcontroladores**  
+**Autor:** Samuel Rubio Tamberg  
+
 **Objetivo:** Integrar un sistema embebido con teclado matricial 4x4 y pantalla LCD I2C a una simulación de brazo robótico en PyBullet utilizando visión artificial con OpenCV y cinemática inversa.
 
 ---
@@ -51,13 +54,12 @@ El sistema implementa una arquitectura **Real-to-Sim**:
 ## 3. Estructura de Archivos del Proyecto
 
 ```text
-Actividad_6/
+Actividad_6/6.1/
 ├── main.py                 # Programa principal (PyBullet + OpenCV + Serial)
 ├── brazo_robot.urdf        # Modelo cinemático y geométrico del brazo robótico
 ├── README.md               # Documentación técnica del proyecto
-├── main_esp.py             # Firmware para ESP32 en MicroPython
 ├── main_esp/
-│   └── main_esp.ino        # Firmware alternativo para ESP32 en Arduino C++
+│   └── main_esp.ino        # Firmware para ESP32 en Arduino C++
 └── imagenes/               # Plantillas de las 16 teclas (300x300 px)
     ├── 0.png ... 9.png     # Teclas numéricas 0 al 9
     ├── A.png ... D.png     # Teclas alfabéticas A, B, C, D
@@ -98,19 +100,36 @@ Para caracteres con trazos discontinuos (como `4`, `7`, `A`, `B`, `D`, `*`, `#`)
 Tener instaladas las dependencias en el entorno virtual (`pybullet`, `opencv-python`, `pyserial`, `numpy`).
 
 ### Paso 1: Conectar Hardware
-- Conectar la ESP32 al puerto USB.
-- Si se usa MicroPython: cargar `main_esp.py` con Thonny y cerrar Thonny para liberar el puerto COM.
-- Si se usa Arduino: subir `main_esp.ino` desde el Arduino IDE y cerrar el Monitor Serie.
+- Conectar la ESP32 al puerto USB de la computadora.
+- Subir `main_esp/main_esp.ino` desde el **Arduino IDE** y cerrar el Monitor Serie para liberar el puerto COM.
 
 ### Paso 2: Ejecutar la Simulación
-Ejecutar el script principal desde PowerShell con el entorno virtual del proyecto:
-
-```powershell
-& C:\Users\samue\PycharmProjects\MICROS\.venv\Scripts\python.exe C:\Users\samue\PycharmProjects\MICROS\Actividad_6\main.py
+Ejecutar el script principal desde la terminal:
+```bash
+python main.py
 ```
+*(O si te encuentras en la raíz del repositorio: `python Actividad_6/6.1/main.py`)*
 
 ### Paso 3: Interactuar con el Sistema
 El sistema admite tres métodos de entrada simultáneos:
 1. **Teclado físico 4x4:** Presionar cualquier tecla en el circuito físico.
 2. **Ventana de PyBullet:** Hacer clic sobre la ventana 3D y pulsar las teclas del computador (`0-9`, `A-D`, `*`, `#`).
 3. **Consola interactiva:** Escribir el carácter en la terminal y presionar `Enter`.
+
+---
+
+## 6. Demostración y Validación en Video
+
+> [!NOTE]
+> Enlace al video de sustentación y demostración práctica donde se evidencia la interacción con el teclado matricial 4x4, la visualización en la pantalla LCD 16x2 I2C, la transmisión por UART y la simulación 3D en PyBullet del brazo robótico trazando caracteres mediante cinemática inversa:
+>
+> 🔗 **Video Demostrativo (YouTube):** [ENLACE_AL_VIDEO_AQUÍ](https://youtu.be/MAtFgYUBsx8)
+
+---
+
+## 7. Información Institucional
+
+- **Estudiante:** Samuel Rubio Tamberg
+- **Institución:** Universidad Militar Nueva Granada
+- **Facultad:** Facultad de Ingeniería
+- **Asignatura:** Microcontroladores

@@ -1,6 +1,9 @@
 ﻿# Actividad 6 - Punto 2: Reconocimiento de Dígitos Manuscritos con Visión Artificial (CNN) y Comunicación Maestro-Esclavo (UART + SPI)
 
-**Materia:** Microcontroladores  
+**Universidad Militar Nueva Granada**  
+**Facultad de Ingeniería — Microcontroladores**  
+**Autor:** Samuel Rubio Tamberg  
+
 **Objetivo:** Desarrollar un sistema embebido inteligente que capture dígitos escritos a mano mediante una cámara web, los clasifique en tiempo real utilizando una Red Neuronal Convolucional (CNN) entrenada sobre el dataset MNIST, y transmita el resultado a un microcontrolador ESP32-S3 Maestro por UART para su retransmisión a un dispositivo Esclavo mediante el bus SPI.
 
 ---
@@ -139,10 +142,11 @@ puerto = serial.Serial('COM10', 9600, timeout=1)
 ```
 
 ### Paso 3: Ejecutar el Sistema de Visión Artificial
-Desde una terminal PowerShell en la raíz del proyecto:
-```powershell
-& C:\Users\samue\PycharmProjects\MICROS\.venv\Scripts\python.exe C:\Users\samue\PycharmProjects\MICROS\Actividad_6\6.2\main.py
+Ejecutar el script principal desde la terminal:
+```bash
+python main.py
 ```
+*(O si te encuentras en la raíz del repositorio: `python Actividad_6/6.2/main.py`)*
 
 ### Paso 4: Presentación de Dígitos
 1. Se abrirán dos ventanas en pantalla:
@@ -151,3 +155,21 @@ Desde una terminal PowerShell en la raíz del proyecto:
 2. Dibujar un número (del `0` al `9`) con marcador negro sobre una hoja blanca (o mostrarlo desde la pantalla de un celular) y colocarlo dentro del recuadro verde.
 3. Al alcanzar una confianza $\ge 90\%$, el sistema mostrará el número reconocido en verde y transmitirá instantáneamente el byte a la ESP32-S3 vía serial para su propagación por el bus SPI.
 4. Para finalizar la ejecución, presionar la tecla **`q`** sobre la ventana de video.
+
+---
+
+## 7. Demostración y Validación en Video
+
+> [!NOTE]
+> Enlace al video de sustentación y demostración práctica donde se evidencia la captura en vivo con la cámara web, el preprocesamiento con OpenCV, la clasificación en tiempo real con la CNN (MNIST), la comunicación UART hacia el ESP32-S3 y la transmisión al esclavo mediante el bus SPI:
+>
+> 🔗 **Video Demostrativo (YouTube):** [ENLACE_AL_VIDEO_AQUÍ](https://youtu.be/oJddQ3Drf8Y)
+
+---
+
+## 8. Información Institucional
+
+- **Estudiante:** Samuel Rubio Tamberg
+- **Institución:** Universidad Militar Nueva Granada
+- **Facultad:** Facultad de Ingeniería
+- **Asignatura:** Microcontroladores
