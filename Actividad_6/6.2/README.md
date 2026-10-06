@@ -67,7 +67,7 @@ Para garantizar una alta precisión y robustez frente a diferentes estilos de es
 
 ---
 
-## 3. Procesamiento de Visión Artificial en Tiempo Real (`main.py`)
+## 3. Procesamiento de Visión Artificial en Tiempo Real (`PuntoA.py`)
 
 Para que la red neuronal reconozca correctamente números dibujados en el mundo real, la imagen capturada por la cámara debe coincidir con el formato canónico de MNIST (fondo negro puro, trazo blanco centrado de $28 \times 28$ píxeles).
 
@@ -136,7 +136,7 @@ Actividad_6/6.2/
 4. Cerrar el Monitor Serie de Arduino para no bloquear el puerto COM.
 
 ### Paso 2: Configuración del Puerto en Python
-En la línea 8 de `main.py`, verificar que el puerto coincida con el asignado al ESP32-S3 en el Administrador de Dispositivos (por defecto `'COM10'`):
+En la línea 8 de `PuntoA.py`, verificar que el puerto coincida con el asignado al ESP32-S3 en el Administrador de Dispositivos (por defecto `'COM10'`):
 ```python
 puerto = serial.Serial('COM10', 9600, timeout=1)
 ```

@@ -155,7 +155,7 @@ pip install pybullet pyserial
 ### Paso 2: Flasheo y Ejecución en la ESP32
 1. Conectar la ESP32 al puerto USB.
 2. Abrir Thonny u otra herramienta de carga de MicroPython.
-3. Cargar el archivo `Actividad_5/main_esp32.py` en la ESP32 con el nombre `main.py` (para arranque automático).
+3. Cargar el archivo `Actividad_5/main_esp32.py` en la ESP32 con el nombre `PuntoA.py` (para arranque automático).
 4. Asegurarse de **no mover el joystick durante el primer segundo de encendido** para permitir la calibración automática de centro.
 5. Verificar mediante el monitor serie que se reciben líneas continuas de la forma `0.00,0.00,0,0`.
 6. **Cerrar el monitor serie de Thonny** para liberar el puerto COM.

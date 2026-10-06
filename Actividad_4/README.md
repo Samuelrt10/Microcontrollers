@@ -115,7 +115,7 @@ Actividad_4/
 - **Filtro antirreboce y transmisión:** Para no colapsar el buffer de entrada del puerto serie, se envía el carácter únicamente si el gesto ha cambiado o si ha transcurrido más de 1.0 segundo (`(tiempo_actual - tiempo_ultimo_envio) > 1.0`).
 - **Interfaz de usuario:** Se dibuja sobre la pantalla el nombre del gesto reconocido en tiempo real y se ofrece salida limpia con la tecla `ESC`.
 
-### 2. Firmware en ESP32 (`main.py`)
+### 2. Firmware en ESP32 (`PuntoA.py`)
 - **Configuración PWM:** Se configuran canales PWM independientes en los pines 12, 14 y 27 a 1 kHz con `machine.PWM()`. En MicroPython para ESP32, el ciclo de trabajo se gestiona en un rango de 10 bits de 0 a 1023.
 - **Entrada no bloqueante con `select.poll`:** En lugar de utilizar `sys.stdin.read(1)` directamente (lo cual detendría la ejecución hasta que llegase un dato), se registra `sys.stdin` en un objeto `select.poll()`. Con `poller.poll(10)` se realiza una espera máxima de 10 ms por datos, permitiendo un bucle fluido.
 - **Gestión de Modos:**
@@ -130,7 +130,7 @@ Actividad_4/
 ### Paso 1: Configurar la ESP32
 1. Conectar la ESP32 a la PC por USB.
 2. Flashear el firmware de MicroPython en la ESP32 (si no está flasheado previamente).
-3. Subir el archivo `main.py` a la raíz del sistema de archivos de la ESP32 (usando Thonny, ampy o el plugin de MicroPython en PyCharm).
+3. Subir el archivo `PuntoA.py` a la raíz del sistema de archivos de la ESP32 (usando Thonny, ampy o el plugin de MicroPython en PyCharm).
 4. Reiniciar la ESP32 para que comience a escuchar comandos por el puerto serie.
 
 ### Paso 2: Configurar el Entorno en la PC
