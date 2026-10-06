@@ -2,6 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Taller Segundo Corte/PuntoB/baxter_common" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/U_Militar" vcs="Git" />
   </component>
 </project>
