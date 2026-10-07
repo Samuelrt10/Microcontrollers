@@ -14,6 +14,22 @@ El objetivo principal de este taller consiste en implementar esquemas de interac
 
 La comunicación bidireccional y continua se establece mediante el bus serial USB (UART a 115200 baudios), integrando la adquisición de señales de sensores/mandos físicos con cálculos cinemáticos y dinámicos dentro de entornos desarrollados sobre PyBullet.
 
+```mermaid
+flowchart LR
+    subgraph Embebido ["Hardware ESP32"]
+        Sensores["Joysticks / Sensores"] --> ADC["ADC 12-bits + Filtros"]
+        ADC --> TX["UART TX (115200 bps)"]
+    end
+
+    subgraph Host ["PC Host (Python)"]
+        RX["UART RX"] --> Parser["Decodificación de Trama"]
+        Parser --> Sim["PyBullet / Gym-Pybullet-Drones\n(Cinemática, PID, Físicas)"]
+        Sim --> Render["Visualizador 3D OpenGL"]
+    end
+
+    TX -- "Cable USB" --> RX
+```
+
 El proyecto está dividido en tres escenarios prácticos (**Punto A, Punto B y Punto C**), cada uno abordando un tipo diferente de sistema robótico y estrategia de control.
 
 ---
@@ -22,6 +38,22 @@ El proyecto está dividido en tres escenarios prácticos (**Punto A, Punto B y P
 
 ### Punto A: Control de Trayectorias de Enjambre de Drones (Gym-Pybullet-Drones)
 * **Objetivo:** Gestionar el desplazamiento coordinado de un enjambre de 4 drones entre distintos waypoints (Punto A, Punto B y Punto C) en el espacio 3D, dictados secuencialmente por el ESP32.
+
+#### Arquitectura de Control
+```mermaid
+flowchart TD
+    ESP["ESP32 (Máquina de Estados Temporizada)"] -->|X, Y, Z (20 Hz)| PC["Python Host"]
+    PC --> Offset["Distribución en Formación Cuadrada\n(Offsets relativos)"]
+    Offset --> D1["Dron 1 (PID DSL)"]
+    Offset --> D2["Dron 2 (PID DSL)"]
+    Offset --> D3["Dron 3 (PID DSL)"]
+    Offset --> D4["Dron 4 (PID DSL)"]
+    D1 -.-> Sim["Entorno Físico PyBullet"]
+    D2 -.-> Sim
+    D3 -.-> Sim
+    D4 -.-> Sim
+```
+
 * **Implementación en Hardware (ESP32):**
   * El firmware (`PuntoAesp32.ino`) actúa como un generador de trayectorias maestro. Estructura una máquina de estados temporizada sin bloqueos (usando `millis()`) que cambia el objetivo espacial cada 7 segundos.
   * Transmite continuamente (a 20 Hz) los vectores cartesianos objetivo $(X_t, Y_t, Z_t)$ correspondientes a las fases de la misión en formato de texto separado por comas (`X,Y,Z\n`).
@@ -29,34 +61,65 @@ El proyecto está dividido en tres escenarios prácticos (**Punto A, Punto B y P
   * Se utiliza el entorno multi-agente `CtrlAviary` de la librería `gym-pybullet-drones`, instanciando 4 drones modelo `Crazyflie 2.X` (`CF2X`).
   * El script lee por serial el objetivo central en el espacio 3D y distribuye a cada dron una posición destino aplicando un **offset vectorial** para mantener una formación cuadrada ($[-0.3, \pm 0.3, 0.0]$ y $[0.3, \pm 0.3, 0.0]$).
   * El control de vuelo de bajo nivel de cada dron se resuelve internamente usando lazos de control PID (`DSLPIDControl`), calculando la acción requerida para que el estado de cada dron converja progresivamente a los setpoints transmitidos por el ESP32.
-  * Se aplica la API moderna de Gymnasium, utilizando `obs, info = env.reset()` y empaquetando adecuadamente las acciones.
+
+---
 
 ### Punto B: Consola de Mandos para Manipulador Colaborativo Baxter (Cinemática Inversa)
 * **Objetivo:** Desarrollar una consola de hardware (tipo Joystick) que permita el posicionamiento cartesiano fluido del efector final del robot Baxter, posibilitando alcanzar y agarrar objetos físicos (Pick & Place).
-* **Conexión de Hardware (ESP32):**
-  * **Joystick Analógico:** Eje X al Pin `34`, Eje Y al Pin `35` y Eje Z al Pin `32` (ADC de 12 bits).
-  * **Botones:** Pulsador de pinza (Gripper) al Pin `25`, Pulsador de cambio de brazo al Pin `26` (Digital `INPUT_PULLUP`).
+
+#### Esquema de Pines (ESP32)
+| Periférico | Pin ESP32 | Tipo | Rango / Notas |
+| :--- | :---: | :---: | :--- |
+| **Joystick Eje X** | `GPIO 34` | Entrada Analógica | 0 a 4095 (Mapeado de velocidad X) |
+| **Joystick Eje Y** | `GPIO 35` | Entrada Analógica | 0 a 4095 (Mapeado de velocidad Y) |
+| **Joystick Eje Z** | `GPIO 32` | Entrada Analógica | 0 a 4095 (Mapeado de velocidad Z) |
+| **Botón Pinza** | `GPIO 25` | Entrada Digital | PULL-UP (0 = Abierto, 1 = Cerrado) |
+| **Botón Brazo** | `GPIO 26` | Entrada Digital | PULL-UP (Cambio Izq/Der) |
+
+#### Flujo de Cinemática Inversa
+```mermaid
+sequenceDiagram
+    participant Joy as Joystick
+    participant ESP as ESP32
+    participant Py as Python Host
+    participant Ik as Motor IK PyBullet
+
+    Joy->>ESP: Voltajes (X, Y, Z)
+    ESP->>ESP: ADC + Zona Muerta (±250) + Normalización
+    ESP->>Py: Trama: dx, dy, dz, estadoPinza
+    Py->>Py: target_pos += (dx, dy, dz)\n(Clipping de área segura)
+    Py->>Ik: p.calculateInverseKinematics(target_pos)
+    Ik-->>Py: Ángulos Articulares (θ1, ..., θ7)
+    Py->>Ik: p.setJointMotorControl2(θ_array)
+    Py->>Ik: Control Prismático dedos (0.00m o 0.04m)
+```
+
 * **Implementación en Hardware (ESP32):**
   * Lee analógicamente los potenciómetros y aplica un filtro de zona muerta (*deadzone* de $\pm250$ alrededor del centro 2048) para anular el drift mecánico y estabilizar la lectura.
   * Normaliza la desviación a una escala de velocidad incremental entre $[-1.0, 1.0]$.
-  * Evalúa el estado de los pulsadores digitales con algoritmos antirrebote (`delay(250)` tras el flanco). Transmite la trama de deltas de movimiento y estados booleanos por UART a 50 Hz (`dx,dy,dz,estadoGripper,brazoActivo`).
+  * Evalúa el estado de los pulsadores digitales con algoritmos antirrebote (`delay(250)` tras el flanco). Transmite la trama por UART a 50 Hz.
 * **Implementación en Software (Python/PyBullet):**
-  * Carga el entorno físico: un plano, una mesa (`table.urdf`), un cubo manipulable (`cube_small.urdf`) y el robot colaborativo Baxter desde sus archivos descriptivos URDF (`baxter_description`).
   * En cada iteración a 60 Hz, el script lee los comandos seriales, los suma a la posición cartesiana actual (`target_pos`) manteniendo la pose dentro de un área segura delimitada (`np.clip`).
   * Utiliza el motor analítico de PyBullet (`p.calculateInverseKinematics`) para calcular los ángulos de cada una de las 7 articulaciones del brazo izquierdo que sitúan el efector final en las coordenadas $(X,Y,Z)$ requeridas, manteniendo siempre una orientación vertical hacia abajo (Pitch $90^\circ$).
-  * Controla la apertura (0.04m) y cierre (0.0m) de los dedos de la pinza aplicando torques a las juntas prismáticas (`p.POSITION_CONTROL`), permitiendo tomar el cubo por fricción física simulada.
+
+---
 
 ### Punto C: Teleoperación de Articulaciones en Robot Humanoide (Atlas)
 * **Objetivo:** Implementar el control directo en tiempo real de cadenas cinemáticas específicas (hombros y brazos) del robot humanoide Atlas dentro de un escenario robótico.
-* **Conexión de Hardware (ESP32):**
-  * Se mapean 3 potenciómetros a los pines analógicos `34`, `35` y `32`, asumiendo las funciones de control de cabeceo, balanceo y guiñada (Pitch, Roll, Yaw) de las articulaciones del hombro/codo.
+
+#### Esquema de Pines (ESP32)
+| Periférico | Pin ESP32 | Función Cinemática | Rango Angular Enviado |
+| :--- | :---: | :--- | :--- |
+| **Potenciómetro 1** | `GPIO 34` | Hombro Pitch (Inclinación) | Incremental (Rad/s) |
+| **Potenciómetro 2** | `GPIO 35` | Hombro Roll (Balanceo) | Incremental (Rad/s) |
+| **Potenciómetro 3** | `GPIO 32` | Codo Yaw (Giro) | Incremental (Rad/s) |
+
 * **Implementación en Hardware (ESP32):**
   * Convierte las lecturas de los potenciómetros (aplicando zona muerta) a **incrementos angulares** muy pequeños expresados en radianes (factor de escala $0.02$).
   * Emite los deltas angulares $(\Delta \theta_1, \Delta \theta_2, \Delta \theta_3)$ al computador mediante UART a una tasa de refresco constante de 50 Hz.
 * **Implementación en Software (Python/PyBullet):**
-  * Se soluciona dinámicamente la resolución de dependencias relativas de los archivos de malla `.obj` / `.dae` cambiando el subdirectorio de trabajo (`os.chdir`) a la carpeta base del URDF del modelo Atlas v4 (Multisense).
+  * Se soluciona dinámicamente la resolución de dependencias relativas de los archivos de malla `.obj` / `.dae` cambiando el subdirectorio de trabajo (`os.chdir`) a la carpeta base del URDF del modelo Atlas v4.
   * El robot se carga fijado por la pelvis a una plataforma base (`useFixedBase=True`) para garantizar estabilidad estática, aislando el problema de equilibrado dinámico y enfocándose en la cinemática de los miembros superiores.
-  * El script identifica dinámicamente el índice numérico de las articulaciones de los brazos revisando iterativamente los nombres de los *joints* mediante `p.getJointInfo()`.
   * Se aplica una acumulación progresiva e integral (`target_angles[i] += dj_i`), limitada entre $[-1.8, 1.8]$ radianes, y se transmite a los actuadores seleccionados mediante control de posición de motor (`p.setJointMotorControl2`).
 
 ---
