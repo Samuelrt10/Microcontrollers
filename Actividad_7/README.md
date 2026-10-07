@@ -143,4 +143,3 @@ Al iniciarse, el gemelo digital se suscribirá al puerto UDP 4210 y comenzará a
 En el siguiente enlace se encuentra el registro audiovisual de la práctica, evidenciando la interacción del hardware y la convergencia del algoritmo distribuido:
 
 🎥 **[Ver Sustentación Práctica Real-to-Sim en YouTube](https://youtu.be/MkKA_Qkp9YE)** 
-*(Nota: Recuerda reemplazar este texto con el enlace real del video)*
